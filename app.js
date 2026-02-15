@@ -663,6 +663,30 @@ class OrofacialApp {
             mouthValue.textContent = `${Math.round(metrics.mouthOpening)}%`;
         }
 
+        // Boca cerrada
+        const mouthClosedFill = document.getElementById('mouth-closed-fill');
+        const mouthClosedValue = document.getElementById('mouth-closed-value');
+        if (mouthClosedFill && mouthClosedValue) {
+            mouthClosedFill.style.width = `${metrics.mouthClosed}%`;
+            mouthClosedValue.textContent = `${Math.round(metrics.mouthClosed)}%`;
+        }
+
+        // Labios fruncidos
+        const lipPursingFill = document.getElementById('lip-pursing-fill');
+        const lipPursingValue = document.getElementById('lip-pursing-value');
+        if (lipPursingFill && lipPursingValue) {
+            lipPursingFill.style.width = `${metrics.lipPursing}%`;
+            lipPursingValue.textContent = `${Math.round(metrics.lipPursing)}%`;
+        }
+
+        // Mejillas infladas
+        const cheeksFill = document.getElementById('cheeks-inflated-fill');
+        const cheeksValue = document.getElementById('cheeks-inflated-value');
+        if (cheeksFill && cheeksValue) {
+            cheeksFill.style.width = `${metrics.cheeksInflated}%`;
+            cheeksValue.textContent = `${Math.round(metrics.cheeksInflated)}%`;
+        }
+
         // Movimiento lateral
         const lateralFill = document.getElementById('lateral-movement-fill');
         const lateralValue = document.getElementById('lateral-movement-value');

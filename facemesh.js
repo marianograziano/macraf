@@ -37,9 +37,12 @@
 /**
  * @typedef {Object} FacialMetrics
  * @property {number} mouthOpening - Apertura bucal (0-100%)
+ * @property {number} mouthClosed - Boca cerrada (0-100%, inverso de apertura)
  * @property {number} lateralMovement - Movimiento lateral de mandíbula (0-100%)
  * @property {Position2D} jawPosition - Posición de la mandíbula normalizada
  * @property {number} smile - Intensidad de sonrisa (0-100%)
+ * @property {number} lipPursing - Labios fruncidos/protruidos (0-100%)
+ * @property {number} cheeksInflated - Mejillas infladas (0-100%)
  * @property {number} leftEyeOpen - Apertura del ojo izquierdo (0-100%)
  * @property {number} rightEyeOpen - Apertura del ojo derecho (0-100%)
  * @property {number} eyebrowsRaised - Elevación de cejas (0-100%)
@@ -424,10 +427,13 @@ class FaceMeshDetector {
     calculateMetrics(landmarks) {
         const metrics = {
             mouthOpening: 0,
+            mouthClosed: 100,
             lateralMovement: 0,
             jawPosition: { x: 0, y: 0 },
-            // Nuevas métricas de expresiones
+            // Métricas de expresiones
             smile: 0,
+            lipPursing: 0,
+            cheeksInflated: 0,
             leftEyeOpen: 0,
             rightEyeOpen: 0,
             eyebrowsRaised: 0,
@@ -446,6 +452,8 @@ class FaceMeshDetector {
             const verticalDistance = Math.abs(lowerLip.y - upperLip.y);
             // Normalizar a un rango de 0-100
             metrics.mouthOpening = Math.min(100, verticalDistance * 500);
+            // Boca cerrada es el inverso de la apertura
+            metrics.mouthClosed = Math.max(0, 100 - metrics.mouthOpening);
         }
 
         // Movimiento lateral (posición horizontal de la mandíbula)
@@ -541,6 +549,53 @@ class FaceMeshDetector {
             // Estimar posición aproximada de la lengua (centro de la boca)
             metrics.tonguePosition.x = (innerMouthTop.x + innerMouthBottom.x) / 2;
             metrics.tonguePosition.y = (innerMouthTop.y + innerMouthBottom.y) / 2;
+        }
+
+        // LABIOS FRUNCIDOS (Lip Pursing)
+        // Cuando los labios se fruncen, el ancho de la boca disminuye
+        // y los labios se protruyen (la distancia vertical se mantiene baja)
+        const leftMouthPurse = landmarks[61];   // Comisura izquierda
+        const rightMouthPurse = landmarks[291];  // Comisura derecha
+        const upperLipPurse = landmarks[13];     // Labio superior
+        const lowerLipPurse = landmarks[14];     // Labio inferior
+
+        if (leftMouthPurse && rightMouthPurse && upperLipPurse && lowerLipPurse) {
+            const mouthWidth = Math.abs(rightMouthPurse.x - leftMouthPurse.x);
+            const mouthHeight = Math.abs(lowerLipPurse.y - upperLipPurse.y);
+
+            // Labios fruncidos: boca estrecha + labios juntos
+            // Ancho bajo = más fruncido, altura baja = labios juntos
+            // Invertimos: cuanto más estrecha la boca, más alto el valor
+            const widthFactor = Math.max(0, 1 - mouthWidth * 8); // normalizar inversamente
+            const closedFactor = Math.max(0, 1 - mouthHeight * 15); // labios juntos
+
+            metrics.lipPursing = Math.min(100, (widthFactor * 60 + closedFactor * 40));
+        }
+
+        // MEJILLAS INFLADAS (Cheeks Inflated)
+        // Estimación: cuando las mejillas se inflan, la distancia entre
+        // el contorno facial lateral y las comisuras labiales aumenta
+        const leftCheek = landmarks[234];   // Contorno facial izquierdo (mejilla)
+        const rightCheek = landmarks[454];  // Contorno facial derecho (mejilla)
+        const leftCorner = landmarks[61];   // Comisura izquierda
+        const rightCorner = landmarks[291]; // Comisura derecha
+        const noseRef = landmarks[1];       // Referencia nasal
+
+        if (leftCheek && rightCheek && leftCorner && rightCorner && noseRef) {
+            // Distancia entre mejilla y comisura de cada lado
+            const leftCheekDist = Math.abs(leftCheek.x - leftCorner.x);
+            const rightCheekDist = Math.abs(rightCheek.x - rightCorner.x);
+            const avgCheekDist = (leftCheekDist + rightCheekDist) / 2;
+
+            // Ancho total de la cara como referencia
+            const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
+
+            // Ratio mejilla-comisura vs ancho facial
+            // Cuando las mejillas se inflan, este ratio aumenta
+            const cheekRatio = avgCheekDist / (faceWidth + 0.001);
+
+            // Normalizar: ratio base ~0.15-0.20, inflado ~0.25+
+            metrics.cheeksInflated = Math.min(100, Math.max(0, (cheekRatio - 0.15) * 600));
         }
 
         return metrics;
