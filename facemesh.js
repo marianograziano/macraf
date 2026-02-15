@@ -1,21 +1,110 @@
 /**
- * Módulo de Detección Facial con MediaPipe Face Mesh
- * Gestiona la webcam y el tracking de landmarks faciales en tiempo real
+ * @module FaceMeshDetector
+ * @description Módulo de Detección Facial con MediaPipe Face Mesh.
+ * Gestiona la webcam y el tracking de landmarks faciales en tiempo real,
+ * dibuja el mesh facial sobre un canvas y calcula métricas de movimiento facial.
  */
 
+/**
+ * @typedef {Object} RGBColor
+ * @property {number} r - Componente rojo (0-255)
+ * @property {number} g - Componente verde (0-255)
+ * @property {number} b - Componente azul (0-255)
+ */
+
+/**
+ * @typedef {Object} MeshConfig
+ * @property {RGBColor} tesselationColor - Color de la malla completa del rostro
+ * @property {RGBColor} eyeColor - Color del contorno de los ojos
+ * @property {RGBColor} lipsColor - Color del contorno de los labios
+ * @property {RGBColor} pointsColor - Color de los puntos clave
+ * @property {number} tesselationOpacity - Opacidad de la malla (0-1)
+ * @property {number} eyeOpacity - Opacidad del contorno de ojos (0-1)
+ * @property {number} lipsOpacity - Opacidad del contorno de labios (0-1)
+ * @property {number} pointsOpacity - Opacidad de los puntos clave (0-1)
+ * @property {number} tesselationWidth - Grosor de línea de la malla
+ * @property {number} eyeWidth - Grosor de línea del contorno de ojos
+ * @property {number} lipsWidth - Grosor de línea del contorno de labios
+ * @property {number} pointSize - Tamaño de los puntos clave en píxeles
+ */
+
+/**
+ * @typedef {Object} Position2D
+ * @property {number} x - Coordenada X normalizada (0-1)
+ * @property {number} y - Coordenada Y normalizada (0-1)
+ */
+
+/**
+ * @typedef {Object} FacialMetrics
+ * @property {number} mouthOpening - Apertura bucal (0-100%)
+ * @property {number} lateralMovement - Movimiento lateral de mandíbula (0-100%)
+ * @property {Position2D} jawPosition - Posición de la mandíbula normalizada
+ * @property {number} smile - Intensidad de sonrisa (0-100%)
+ * @property {number} leftEyeOpen - Apertura del ojo izquierdo (0-100%)
+ * @property {number} rightEyeOpen - Apertura del ojo derecho (0-100%)
+ * @property {number} eyebrowsRaised - Elevación de cejas (0-100%)
+ * @property {number} tongueVisible - Estimación de visibilidad de lengua (0-100%)
+ * @property {Position2D} tonguePosition - Posición estimada de la lengua
+ */
+
+/**
+ * @typedef {Object} FaceLandmark
+ * @property {number} x - Coordenada X normalizada (0-1)
+ * @property {number} y - Coordenada Y normalizada (0-1)
+ * @property {number} z - Coordenada Z (profundidad relativa)
+ */
+
+/**
+ * @callback OnResultsCallback
+ * @param {FaceLandmark[]} landmarks - Array de 478 landmarks faciales
+ * @param {FacialMetrics} metrics - Métricas calculadas del frame actual
+ */
+
+/**
+ * Detector de malla facial en tiempo real usando MediaPipe Face Mesh.
+ * Captura video de la webcam, detecta landmarks faciales y calcula
+ * métricas de movimiento orofacial.
+ *
+ * @class FaceMeshDetector
+ * @example
+ * const detector = new FaceMeshDetector();
+ * await detector.initialize();
+ * detector.setOnResultsCallback((landmarks, metrics) => {
+ *   console.log('Apertura bucal:', metrics.mouthOpening);
+ * });
+ * await detector.start();
+ */
 class FaceMeshDetector {
+    /**
+     * Crea una nueva instancia del detector de malla facial.
+     * Inicializa la configuración visual del mesh con valores por defecto.
+     */
     constructor() {
+        /** @type {?Object} Instancia de MediaPipe FaceMesh */
         this.faceMesh = null;
+        /** @type {?Object} Instancia de la cámara MediaPipe */
         this.camera = null;
+        /** @type {?HTMLVideoElement} Elemento de video para la webcam */
         this.videoElement = null;
+        /** @type {?HTMLCanvasElement} Canvas para dibujar el mesh */
         this.canvasElement = null;
+        /** @type {?CanvasRenderingContext2D} Contexto 2D del canvas */
         this.canvasCtx = null;
+        /** @type {boolean} Indica si la detección está activa */
         this.isRunning = false;
+        /** @type {?OnResultsCallback} Callback para procesar resultados */
         this.onResultsCallback = null;
+        /** @type {?FaceLandmark[]} Landmarks del último frame procesado */
         this.currentLandmarks = null;
+        /** @type {number} Nivel de zoom actual (1.0 = sin zoom) */
         this.zoom = 1.0;
 
-        // Configuración de visualización del mesh
+        /**
+         * Configuración de visualización del mesh facial.
+         * Controla colores, opacidades y grosores de los diferentes
+         * elementos visuales de la malla.
+         * @type {MeshConfig}
+         */
         this.meshConfig = {
             // Color del mesh (formato RGB)
             tesselationColor: { r: 0, g: 255, b: 100 },
@@ -40,7 +129,12 @@ class FaceMeshDetector {
     }
 
     /**
-     * Inicializa MediaPipe Face Mesh
+     * Inicializa MediaPipe Face Mesh y configura el canvas y video.
+     * Debe llamarse antes de {@link FaceMeshDetector#start}.
+     *
+     * @async
+     * @returns {void}
+     * @throws {Error} Si no se encuentran los elementos DOM requeridos
      */
     async initialize() {
         this.videoElement = document.getElementById('webcam');
@@ -67,7 +161,12 @@ class FaceMeshDetector {
     }
 
     /**
-     * Inicia la cámara y la detección
+     * Inicia la webcam y comienza la detección facial en tiempo real.
+     * Configura la resolución de captura a 1920x1080 y aplica espejo CSS.
+     *
+     * @async
+     * @returns {boolean} `true` si la cámara se inició correctamente
+     * @throws {Error} Si no se puede acceder a la cámara (permisos denegados, etc.)
      */
     async start() {
         if (this.isRunning) {
@@ -109,7 +208,10 @@ class FaceMeshDetector {
     }
 
     /**
-     * Detiene la cámara y la detección
+     * Detiene la webcam, la detección facial y limpia el canvas.
+     * Libera los recursos de la cámara.
+     *
+     * @returns {void}
      */
     stop() {
         if (this.camera) {
@@ -127,7 +229,13 @@ class FaceMeshDetector {
     }
 
     /**
-     * Ajusta el nivel de zoom
+     * Ajusta el nivel de zoom de la cámara.
+     * Intenta usar zoom nativo del hardware primero, si el navegador/cámara
+     * no lo soporta, aplica zoom digital mediante transformaciones CSS.
+     *
+     * @async
+     * @param {number|string} value - Nivel de zoom (1.0 = sin zoom, 3.0 = máximo)
+     * @returns {void}
      */
     async setZoom(value) {
         this.zoom = parseFloat(value);
@@ -178,7 +286,13 @@ class FaceMeshDetector {
     }
 
     /**
-     * Procesa los resultados de Face Mesh
+     * Callback interno que procesa los resultados de cada frame de Face Mesh.
+     * Dibuja el mesh, calcula métricas y notifica al callback externo.
+     *
+     * @param {Object} results - Resultados de MediaPipe Face Mesh
+     * @param {FaceLandmark[][]} results.multiFaceLandmarks - Landmarks detectados por rostro
+     * @returns {void}
+     * @private
      */
     onResults(results) {
         // Limpiar canvas
@@ -207,7 +321,13 @@ class FaceMeshDetector {
     }
 
     /**
-     * Dibuja el mesh facial en el canvas
+     * Dibuja el mesh facial completo en el canvas overlay.
+     * Renderiza la malla de teselación, contornos de ojos y labios,
+     * puntos clave y puntos de detección de lengua.
+     *
+     * @param {FaceLandmark[]} landmarks - Array de 478 landmarks faciales
+     * @returns {void}
+     * @private
      */
     drawFaceMesh(landmarks) {
 
@@ -294,7 +414,12 @@ class FaceMeshDetector {
     }
 
     /**
-     * Calcula métricas de movimiento facial y expresiones
+     * Calcula métricas de movimiento facial y expresiones a partir de landmarks.
+     * Evalúa apertura bucal, movimiento lateral, sonrisa, apertura de ojos,
+     * elevación de cejas y estimación de visibilidad de lengua.
+     *
+     * @param {FaceLandmark[]} landmarks - Array de 478 landmarks faciales
+     * @returns {FacialMetrics} Objeto con todas las métricas calculadas (valores 0-100)
      */
     calculateMetrics(landmarks) {
         const metrics = {
@@ -422,44 +547,58 @@ class FaceMeshDetector {
     }
 
     /**
-     * Registrar callback para recibir resultados
+     * Registra un callback que será invocado en cada frame con resultados.
+     *
+     * @param {OnResultsCallback} callback - Función a ejecutar con landmarks y métricas
+     * @returns {void}
      */
     setOnResultsCallback(callback) {
         this.onResultsCallback = callback;
     }
 
     /**
-     * Obtener landmarks actuales
+     * Obtiene los landmarks del último frame procesado.
+     *
+     * @returns {?FaceLandmark[]} Array de landmarks o `null` si no hay detección activa
      */
     getCurrentLandmarks() {
         return this.currentLandmarks;
     }
 
     /**
-     * Verificar si está en ejecución
+     * Verifica si la detección facial está activa.
+     *
+     * @returns {boolean} `true` si la cámara y detección están corriendo
      */
     getIsRunning() {
         return this.isRunning;
     }
 
     /**
-     * Actualizar configuración del mesh
+     * Actualiza la configuración visual del mesh facial (merge parcial).
+     *
+     * @param {Partial<MeshConfig>} config - Propiedades a actualizar
+     * @returns {void}
      */
     updateMeshConfig(config) {
         this.meshConfig = { ...this.meshConfig, ...config };
     }
 
     /**
-     * Obtener configuración actual del mesh
+     * Obtiene una copia de la configuración actual del mesh.
+     *
+     * @returns {MeshConfig} Copia del objeto de configuración
      */
     getMeshConfig() {
         return { ...this.meshConfig };
     }
 
     /**
-     * Establecer color de un elemento del mesh
-     * @param {string} element - 'tesselation', 'eye', 'lips', 'points'
-     * @param {Object} color - {r, g, b}
+     * Establece el color de un elemento específico del mesh.
+     *
+     * @param {('tesselation'|'eye'|'lips'|'points')} element - Elemento del mesh a colorear
+     * @param {RGBColor} color - Nuevo color en formato RGB
+     * @returns {void}
      */
     setMeshColor(element, color) {
         const colorKey = `${element}Color`;
@@ -469,9 +608,11 @@ class FaceMeshDetector {
     }
 
     /**
-     * Establecer grosor de línea de un elemento
-     * @param {string} element - 'tesselation', 'eye', 'lips'
-     * @param {number} width - grosor de línea
+     * Establece el grosor de línea de un elemento del mesh.
+     *
+     * @param {('tesselation'|'eye'|'lips')} element - Elemento del mesh
+     * @param {number} width - Grosor de línea en píxeles
+     * @returns {void}
      */
     setMeshWidth(element, width) {
         const widthKey = `${element}Width`;
@@ -481,9 +622,12 @@ class FaceMeshDetector {
     }
 
     /**
-     * Establecer opacidad de un elemento
-     * @param {string} element - 'tesselation', 'eye', 'lips', 'points'
-     * @param {number} opacity - opacidad (0-1)
+     * Establece la opacidad de un elemento del mesh.
+     * El valor se limita al rango [0, 1].
+     *
+     * @param {('tesselation'|'eye'|'lips'|'points')} element - Elemento del mesh
+     * @param {number} opacity - Opacidad (0 = transparente, 1 = opaco)
+     * @returns {void}
      */
     setMeshOpacity(element, opacity) {
         const opacityKey = `${element}Opacity`;

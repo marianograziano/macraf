@@ -1,23 +1,93 @@
 /**
- * Módulo de Grabación de Sesiones
- * Gestiona la grabación de datos durante las sesiones de ejercicio
+ * @module SessionRecorder
+ * @description Módulo de Grabación de Sesiones.
+ * Gestiona la grabación, pausa, reanudación y almacenamiento de datos
+ * durante las sesiones de ejercicio orofacial.
  */
 
+/**
+ * @typedef {Object} SessionMetrics
+ * @property {number} avgMouthOpening - Apertura bucal promedio (0-100%)
+ * @property {number} maxMouthOpening - Apertura bucal máxima (0-100%)
+ * @property {number} avgLateralMovement - Movimiento lateral promedio (0-100%)
+ * @property {number} maxLateralMovement - Movimiento lateral máximo (0-100%)
+ * @property {number} completionPercentage - Porcentaje de la duración total completado (0-100)
+ */
+
+/**
+ * @typedef {Object} DataPoint
+ * @property {number} timestamp - Tiempo transcurrido en milisegundos desde el inicio
+ * @property {number} mouthOpening - Apertura bucal en el momento (0-100%)
+ * @property {number} lateralMovement - Movimiento lateral en el momento (0-100%)
+ * @property {Position2D} jawPosition - Posición de la mandíbula normalizada
+ */
+
+/**
+ * @typedef {Object} Session
+ * @property {string} id - Identificador único de sesión (prefijo 'ses_')
+ * @property {string} exerciseId - ID del ejercicio asociado
+ * @property {string} exerciseName - Nombre del ejercicio
+ * @property {string} exerciseType - Tipo del ejercicio
+ * @property {number} duration - Duración objetivo en segundos
+ * @property {string} startTime - Fecha/hora de inicio en formato ISO 8601
+ * @property {?string} endTime - Fecha/hora de fin en formato ISO 8601
+ * @property {DataPoint[]} dataPoints - Datos registrados durante la sesión
+ * @property {SessionMetrics} metrics - Métricas calculadas de la sesión
+ * @property {('in-progress'|'completed'|'partial'|'incomplete')} status - Estado de la sesión
+ * @property {number} [actualDuration] - Duración real en segundos
+ */
+
+/**
+ * @typedef {Object} SessionStats
+ * @property {number} totalSessions - Número total de sesiones registradas
+ * @property {number} completedSessions - Número de sesiones completadas (≥90%)
+ * @property {number} avgCompletionRate - Tasa de completado promedio (0-100%)
+ * @property {number} totalTimeMinutes - Tiempo total de ejercicio en minutos
+ */
+
+/**
+ * Grabador de sesiones de ejercicio orofacial.
+ * Registra datos de landmarks y métricas durante las sesiones,
+ * con soporte para pausa/reanudación y almacenamiento en localStorage.
+ *
+ * @class SessionRecorder
+ * @example
+ * const recorder = new SessionRecorder();
+ * recorder.startSession(exercise);
+ * // ... registrar datos durante la sesión
+ * recorder.recordDataPoint(landmarks, metrics);
+ * const result = recorder.stopSession();
+ */
 class SessionRecorder {
+    /**
+     * Crea una nueva instancia del grabador de sesiones.
+     * Carga sesiones previas desde localStorage al instanciarse.
+     */
     constructor() {
+        /** @type {Session[]} Historial de sesiones almacenadas */
         this.sessions = [];
+        /** @type {?Session} Sesión actualmente en grabación */
         this.currentSession = null;
+        /** @type {boolean} Indica si hay una grabación activa */
         this.isRecording = false;
+        /** @type {boolean} Indica si la grabación está pausada */
         this.isPaused = false;
+        /** @type {?number} Timestamp de inicio de la sesión (ms) */
         this.startTime = null;
+        /** @type {?number} Timestamp del momento de pausa (ms) */
         this.pauseTime = null;
+        /** @type {number} Tiempo total acumulado en pausa (ms) */
         this.totalPausedTime = 0;
+        /** @type {?number} ID del intervalo de grabación */
         this.recordingInterval = null;
         this.loadSessions();
     }
 
     /**
-     * Cargar sesiones desde localStorage
+     * Carga el historial de sesiones desde localStorage.
+     * Si los datos están corruptos, reinicia con un array vacío.
+     *
+     * @returns {void}
      */
     loadSessions() {
         const stored = localStorage.getItem('orofacial_sessions');
@@ -33,7 +103,9 @@ class SessionRecorder {
     }
 
     /**
-     * Guardar sesiones en localStorage
+     * Persiste el historial de sesiones en localStorage.
+     *
+     * @returns {void}
      */
     saveSessions() {
         try {
@@ -45,14 +117,20 @@ class SessionRecorder {
     }
 
     /**
-     * Generar ID único
+     * Genera un ID único con prefijo 'ses_' y sufijo aleatorio.
+     *
+     * @returns {string} ID único con formato `ses_{timestamp}_{random}`
      */
     generateId() {
         return 'ses_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
     /**
-     * Iniciar nueva sesión
+     * Inicia una nueva sesión de grabación para un ejercicio.
+     * Solo permite una sesión activa a la vez.
+     *
+     * @param {Exercise} exercise - Ejercicio a ejecutar durante la sesión
+     * @returns {?Session} La sesión creada, o `null` si ya hay una activa
      */
     startSession(exercise) {
         if (this.isRecording) {
@@ -89,7 +167,9 @@ class SessionRecorder {
     }
 
     /**
-     * Pausar sesión actual
+     * Pausa la sesión actual de grabación.
+     *
+     * @returns {boolean} `true` si se pausó, `false` si no hay sesión activa
      */
     pauseSession() {
         if (!this.isRecording || this.isPaused) {
@@ -103,7 +183,9 @@ class SessionRecorder {
     }
 
     /**
-     * Reanudar sesión
+     * Reanuda la sesión pausada. Acumula el tiempo en pausa.
+     *
+     * @returns {boolean} `true` si se reanudó, `false` si no estaba pausada
      */
     resumeSession() {
         if (!this.isRecording || !this.isPaused) {
@@ -118,7 +200,12 @@ class SessionRecorder {
     }
 
     /**
-     * Registrar punto de datos
+     * Registra un punto de datos con las métricas del frame actual.
+     * Solo graba si hay sesión activa y no está pausada.
+     *
+     * @param {FaceLandmark[]} landmarks - Landmarks faciales del frame
+     * @param {FacialMetrics} metrics - Métricas calculadas del frame
+     * @returns {void}
      */
     recordDataPoint(landmarks, metrics) {
         if (!this.isRecording || this.isPaused || !this.currentSession) {
@@ -138,7 +225,13 @@ class SessionRecorder {
     }
 
     /**
-     * Detener sesión y guardar
+     * Detiene la sesión, calcula métricas finales y la guarda en el historial.
+     * Determina el estado según el porcentaje completado:
+     * - ≥90%: 'completed'
+     * - ≥50%: 'partial'
+     * - <50%: 'incomplete'
+     *
+     * @returns {?Session} La sesión completada con métricas, o `null` si no había sesión
      */
     stopSession() {
         if (!this.isRecording || !this.currentSession) {
@@ -180,7 +273,11 @@ class SessionRecorder {
     }
 
     /**
-     * Calcular métricas finales de la sesión
+     * Calcula promedios y máximos de apertura bucal y movimiento lateral
+     * a partir de los puntos de datos registrados durante la sesión.
+     *
+     * @returns {void}
+     * @private
      */
     calculateFinalMetrics() {
         if (!this.currentSession || this.currentSession.dataPoints.length === 0) {
@@ -216,7 +313,9 @@ class SessionRecorder {
     }
 
     /**
-     * Obtener tiempo transcurrido en milisegundos
+     * Calcula el tiempo transcurrido descontando el tiempo en pausa.
+     *
+     * @returns {number} Tiempo transcurrido en milisegundos
      */
     getElapsedTime() {
         if (!this.startTime) return 0;
@@ -231,7 +330,9 @@ class SessionRecorder {
     }
 
     /**
-     * Obtener tiempo transcurrido formateado
+     * Obtiene el tiempo transcurrido formateado como "MM:SS".
+     *
+     * @returns {string} Tiempo formateado (e.g. "02:30")
      */
     getFormattedElapsedTime() {
         const ms = this.getElapsedTime();
@@ -243,7 +344,9 @@ class SessionRecorder {
     }
 
     /**
-     * Obtener progreso de la sesión (0-100)
+     * Calcula el progreso de la sesión respecto a la duración objetivo.
+     *
+     * @returns {number} Progreso en porcentaje (0-100)
      */
     getProgress() {
         if (!this.currentSession) return 0;
@@ -255,7 +358,11 @@ class SessionRecorder {
     }
 
     /**
-     * Resetear grabador
+     * Resetea el estado interno del grabador.
+     * Limpia la sesión actual, flags y tiempos.
+     *
+     * @returns {void}
+     * @private
      */
     reset() {
         this.currentSession = null;
@@ -272,35 +379,48 @@ class SessionRecorder {
     }
 
     /**
-     * Obtener sesión actual
+     * Obtiene la sesión actualmente en grabación.
+     *
+     * @returns {?Session} Sesión actual o `null`
      */
     getCurrentSession() {
         return this.currentSession;
     }
 
     /**
-     * Obtener todas las sesiones
+     * Obtiene una copia de todas las sesiones del historial.
+     *
+     * @returns {Session[]} Copia del array de sesiones
      */
     getAllSessions() {
         return [...this.sessions];
     }
 
     /**
-     * Obtener sesiones por ejercicio
+     * Filtra las sesiones por ID de ejercicio.
+     *
+     * @param {string} exerciseId - ID del ejercicio a filtrar
+     * @returns {Session[]} Sesiones que corresponden al ejercicio
      */
     getSessionsByExercise(exerciseId) {
         return this.sessions.filter(session => session.exerciseId === exerciseId);
     }
 
     /**
-     * Obtener sesión por ID
+     * Busca una sesión por su ID.
+     *
+     * @param {string} id - ID de la sesión a buscar
+     * @returns {?Session} La sesión encontrada o `undefined`
      */
     getSessionById(id) {
         return this.sessions.find(session => session.id === id);
     }
 
     /**
-     * Eliminar sesión
+     * Elimina una sesión del historial por su ID.
+     *
+     * @param {string} id - ID de la sesión a eliminar
+     * @returns {boolean} `true` si se eliminó, `false` si no se encontró
      */
     deleteSession(id) {
         const index = this.sessions.findIndex(session => session.id === id);
@@ -316,18 +436,27 @@ class SessionRecorder {
     }
 
     /**
-     * Verificar estado
+     * Verifica si hay una grabación activa.
+     *
+     * @returns {boolean} `true` si está grabando
      */
     getIsRecording() {
         return this.isRecording;
     }
 
+    /**
+     * Verifica si la grabación está pausada.
+     *
+     * @returns {boolean} `true` si está pausada
+     */
     getIsPaused() {
         return this.isPaused;
     }
 
     /**
-     * Obtener estadísticas generales
+     * Obtiene estadísticas generales de todas las sesiones registradas.
+     *
+     * @returns {SessionStats} Resumen estadístico del historial
      */
     getStats() {
         const totalSessions = this.sessions.length;

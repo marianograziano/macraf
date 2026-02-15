@@ -1,17 +1,40 @@
 /**
- * Aplicación Principal - Asistente de Ejercicios Orofaciales
- * Coordina todos los módulos y maneja la interacción del usuario
+ * @module OrofacialApp
+ * @description Aplicación Principal - Asistente de Ejercicios Orofaciales.
+ * Coordina todos los módulos (FaceMeshDetector, ExerciseManager,
+ * SessionRecorder, SessionReviewer) y maneja la interacción del usuario.
  */
 
+/**
+ * Aplicación principal que orquesta la detección facial, gestión de ejercicios,
+ * grabación de sesiones y visualización de resultados.
+ *
+ * @class OrofacialApp
+ * @see FaceMeshDetector
+ * @see ExerciseManager
+ * @see SessionRecorder
+ * @see SessionReviewer
+ */
 class OrofacialApp {
+    /**
+     * Crea una nueva instancia de la aplicación.
+     */
     constructor() {
+        /** @type {string} Vista activa actual ('practice'|'exercises'|'review') */
         this.currentView = 'practice';
+        /** @type {?number} ID del intervalo de actualización del timer de sesión */
         this.sessionInterval = null;
+        /** @type {?number} ID del intervalo de actualización de métricas */
         this.metricsUpdateInterval = null;
     }
 
     /**
-     * Inicializar aplicación
+     * Inicializa todos los módulos y configura la interfaz.
+     * Debe llamarse una vez al cargar el DOM.
+     *
+     * @async
+     * @returns {void}
+     * @throws {Error} Si falla la inicialización de Face Mesh o ejercicios
      */
     async init() {
         console.log('Inicializando Asistente Orofacial...');
@@ -49,7 +72,10 @@ class OrofacialApp {
     }
 
     /**
-     * Configurar navegación
+     * Configura los event listeners de los botones de navegación principal.
+     *
+     * @returns {void}
+     * @private
      */
     setupNavigation() {
         const navButtons = document.querySelectorAll('.nav-btn');
@@ -67,7 +93,11 @@ class OrofacialApp {
     }
 
     /**
-     * Mostrar vista
+     * Muestra una vista específica y oculta las demás.
+     * Ejecuta acciones de carga específicas al cambiar de vista.
+     *
+     * @param {('practice'|'exercises'|'review')} viewName - Nombre de la vista a mostrar
+     * @returns {void}
      */
     showView(viewName) {
         this.currentView = viewName;
@@ -92,7 +122,11 @@ class OrofacialApp {
     }
 
     /**
-     * Configurar vista de práctica
+     * Configura la vista de práctica: cámara, zoom, mesh, selector de ejercicios,
+     * botones de sesión y callback de resultados de Face Mesh.
+     *
+     * @returns {void}
+     * @private
      */
     setupPracticeView() {
         // Botones de cámara
@@ -145,7 +179,12 @@ class OrofacialApp {
     }
 
     /**
-     * Configurar controles de mesh
+     * Configura los controles de personalización visual del mesh facial:
+     * colores, grosores, opacidades para labios, ojos, teselación y puntos,
+     * y botón de reset a valores por defecto.
+     *
+     * @returns {void}
+     * @private
      */
     setupMeshControls() {
         // Helper para convertir hex a RGB
@@ -317,7 +356,10 @@ class OrofacialApp {
     }
 
     /**
-     * Iniciar cámara
+     * Inicia la webcam y actualiza la UI (botones, indicador de estado).
+     *
+     * @async
+     * @returns {void}
      */
     async startCamera() {
         try {
@@ -346,7 +388,10 @@ class OrofacialApp {
     }
 
     /**
-     * Detener cámara
+     * Detiene la webcam y resetea la UI.
+     * Si hay una sesión activa, la detiene primero.
+     *
+     * @returns {void}
      */
     stopCamera() {
         faceMeshDetector.stop();
@@ -376,7 +421,10 @@ class OrofacialApp {
     }
 
     /**
-     * Cargar ejercicios en selector
+     * Carga los ejercicios disponibles en el selector de la vista de práctica
+     * y en el filtro de la vista de revisión.
+     *
+     * @returns {void}
      */
     loadExercisesIntoSelect() {
         const select = document.getElementById('exercise-select');
@@ -406,7 +454,11 @@ class OrofacialApp {
     }
 
     /**
-     * Seleccionar ejercicio
+     * Selecciona un ejercicio y muestra su información en la vista de práctica.
+     * Habilita el botón de inicio de sesión si la cámara está activa.
+     *
+     * @param {string} exerciseId - ID del ejercicio seleccionado, o cadena vacía para deseleccionar
+     * @returns {void}
      */
     selectExercise(exerciseId) {
         if (!exerciseId) {
@@ -433,7 +485,10 @@ class OrofacialApp {
     }
 
     /**
-     * Iniciar sesión
+     * Inicia una sesión de ejercicio con el ejercicio actualmente seleccionado.
+     * Requiere cámara activa y ejercicio seleccionado.
+     *
+     * @returns {void}
      */
     startSession() {
         const exercise = exerciseManager.getCurrentExercise();
@@ -472,7 +527,10 @@ class OrofacialApp {
     }
 
     /**
-     * Alternar pausa
+     * Alterna entre pausa y reanudación de la sesión activa.
+     * Actualiza el icono y texto del botón correspondientemente.
+     *
+     * @returns {void}
      */
     togglePause() {
         const isPaused = sessionRecorder.getIsPaused();
@@ -498,7 +556,10 @@ class OrofacialApp {
     }
 
     /**
-     * Detener sesión
+     * Detiene la sesión activa, muestra un resumen de resultados
+     * y restaura la UI a su estado previo.
+     *
+     * @returns {void}
      */
     stopSession() {
         if (!sessionRecorder.getIsRecording()) {
@@ -542,7 +603,11 @@ class OrofacialApp {
     }
 
     /**
-     * Actualizar timer de sesión
+     * Actualiza el timer visual y la barra de progreso de la sesión.
+     * Auto-detiene la sesión al alcanzar el 100%.
+     *
+     * @returns {void}
+     * @private
      */
     updateSessionTimer() {
         const formattedTime = sessionRecorder.getFormattedElapsedTime();
@@ -558,7 +623,13 @@ class OrofacialApp {
     }
 
     /**
-     * Procesar resultados de Face Mesh
+     * Callback que procesa los resultados de Face Mesh en cada frame.
+     * Graba datos si hay sesión activa y actualiza las métricas visuales.
+     *
+     * @param {FaceLandmark[]} landmarks - Landmarks faciales del frame
+     * @param {FacialMetrics} metrics - Métricas calculadas del frame
+     * @returns {void}
+     * @private
      */
     onFaceMeshResults(landmarks, metrics) {
         // Si hay sesión activa y no está pausada, grabar datos
@@ -571,7 +642,12 @@ class OrofacialApp {
     }
 
     /**
-     * Actualizar display de métricas
+     * Actualiza las barras de progreso y valores numéricos de todas las
+     * métricas faciales en la UI (boca, lateral, sonrisa, ojos, cejas, lengua).
+     *
+     * @param {FacialMetrics} metrics - Métricas a mostrar
+     * @returns {void}
+     * @private
      */
     updateMetricsDisplay(metrics) {
         const metricsDisplay = document.getElementById('metrics-display');
@@ -637,7 +713,11 @@ class OrofacialApp {
     }
 
     /**
-     * Configurar vista de ejercicios
+     * Configura la vista de gestión de ejercicios:
+     * botón de nuevo ejercicio, exportar/importar JSON.
+     *
+     * @returns {void}
+     * @private
      */
     setupExercisesView() {
         const addExerciseBtn = document.getElementById('add-exercise');
@@ -678,7 +758,10 @@ class OrofacialApp {
     }
 
     /**
-     * Cargar lista de ejercicios
+     * Renderiza la grilla de tarjetas de ejercicios en la vista de ejercicios.
+     * Muestra un estado vacío si no hay ejercicios.
+     *
+     * @returns {void}
      */
     loadExercisesList() {
         const grid = document.getElementById('exercises-grid');
@@ -724,7 +807,11 @@ class OrofacialApp {
     }
 
     /**
-     * Mostrar modal de ejercicio
+     * Muestra el modal de creación/edición de ejercicio.
+     * Si se pasa un ID, precarga los datos del ejercicio existente.
+     *
+     * @param {?string} [exerciseId=null] - ID del ejercicio a editar, o `null` para crear nuevo
+     * @returns {void}
      */
     showExerciseModal(exerciseId = null) {
         const modal = document.getElementById('exercise-modal');
@@ -753,14 +840,21 @@ class OrofacialApp {
     }
 
     /**
-     * Editar ejercicio
+     * Abre el modal para editar un ejercicio existente.
+     *
+     * @param {string} exerciseId - ID del ejercicio a editar
+     * @returns {void}
      */
     editExercise(exerciseId) {
         this.showExerciseModal(exerciseId);
     }
 
     /**
-     * Eliminar ejercicio
+     * Elimina un ejercicio previa confirmación del usuario.
+     * Recarga la lista de ejercicios y el selector.
+     *
+     * @param {string} exerciseId - ID del ejercicio a eliminar
+     * @returns {void}
      */
     deleteExercise(exerciseId) {
         if (confirm('¿Estás seguro de que quieres eliminar este ejercicio?')) {
@@ -771,7 +865,10 @@ class OrofacialApp {
     }
 
     /**
-     * Configurar vista de revisión
+     * Configura la vista de revisión: filtro por ejercicio.
+     *
+     * @returns {void}
+     * @private
      */
     setupReviewView() {
         const filterSelect = document.getElementById('filter-exercise');
@@ -781,7 +878,9 @@ class OrofacialApp {
     }
 
     /**
-     * Cargar lista de sesiones
+     * Carga y renderiza la lista de sesiones en la vista de revisión.
+     *
+     * @returns {void}
      */
     loadSessionsList() {
         const container = document.getElementById('sessions-list');
@@ -790,7 +889,11 @@ class OrofacialApp {
     }
 
     /**
-     * Configurar modales
+     * Configura los event listeners de cierre para todos los modales
+     * (ejercicio y sesión), incluyendo overlay, botón X y cancelar.
+     *
+     * @returns {void}
+     * @private
      */
     setupModals() {
         // Modal de ejercicio
@@ -830,7 +933,10 @@ class OrofacialApp {
     }
 
     /**
-     * Guardar ejercicio
+     * Guarda un ejercicio nuevo o actualizado desde el formulario del modal.
+     * Valida los datos antes de guardar y recarga las listas.
+     *
+     * @returns {void}
      */
     saveExercise() {
         const exerciseData = {

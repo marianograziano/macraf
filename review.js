@@ -1,15 +1,33 @@
 /**
- * Módulo de Revisión de Sesiones
- * Gestiona la visualización y análisis de sesiones grabadas
+ * @module SessionReviewer
+ * @description Módulo de Revisión de Sesiones.
+ * Gestiona la visualización, análisis y renderizado de sesiones grabadas,
+ * incluyendo tarjetas de sesión, detalles con estadísticas y gráficas de progreso.
  */
 
+/**
+ * Visualizador y analizador de sesiones de ejercicio.
+ * Renderiza listas de sesiones, detalles individuales con estadísticas
+ * y gráficas de progreso temporal usando Canvas 2D.
+ *
+ * @class SessionReviewer
+ */
 class SessionReviewer {
+    /**
+     * Crea una nueva instancia del revisor de sesiones.
+     */
     constructor() {
+        /** @type {?Session} Sesión actualmente visualizada en el modal */
         this.currentSessionView = null;
     }
 
     /**
-     * Renderizar lista de sesiones
+     * Renderiza la lista completa de sesiones en un contenedor HTML.
+     * Si no hay sesiones, muestra un estado vacío.
+     *
+     * @param {HTMLElement} container - Elemento DOM contenedor
+     * @param {Session[]} sessions - Array de sesiones a renderizar
+     * @returns {void}
      */
     renderSessionsList(container, sessions) {
         if (!sessions || sessions.length === 0) {
@@ -38,7 +56,11 @@ class SessionReviewer {
     }
 
     /**
-     * Renderizar tarjeta de sesión
+     * Genera el HTML de una tarjeta individual de sesión
+     * con estado, fecha y estadísticas resumidas.
+     *
+     * @param {Session} session - Sesión a renderizar
+     * @returns {string} HTML de la tarjeta de sesión
      */
     renderSessionCard(session) {
         const statusClass = this.getStatusClass(session.status);
@@ -74,7 +96,9 @@ class SessionReviewer {
     }
 
     /**
-     * Renderizar estado vacío
+     * Genera el HTML del estado vacío cuando no hay sesiones registradas.
+     *
+     * @returns {string} HTML del estado vacío con icono y mensaje
      */
     renderEmptyState() {
         return `
@@ -90,7 +114,12 @@ class SessionReviewer {
     }
 
     /**
-     * Mostrar detalles de sesión
+     * Muestra los detalles de una sesión en un modal con estadísticas y gráfica.
+     * Renderiza la gráfica de progreso después de un breve delay para asegurar
+     * que el canvas esté disponible en el DOM.
+     *
+     * @param {Session} session - Sesión a visualizar
+     * @returns {void}
      */
     showSessionDetails(session) {
         this.currentSessionView = session;
@@ -109,7 +138,11 @@ class SessionReviewer {
     }
 
     /**
-     * Renderizar detalles de sesión
+     * Genera el HTML de la vista detallada de una sesión,
+     * incluyendo grid de estadísticas, canvas para gráfica y botón de eliminación.
+     *
+     * @param {Session} session - Sesión a renderizar
+     * @returns {string} HTML de los detalles de la sesión
      */
     renderSessionDetails(session) {
         const date = new Date(session.startTime);
@@ -170,7 +203,12 @@ class SessionReviewer {
     }
 
     /**
-     * Renderizar gráfica de progreso
+     * Renderiza una gráfica de líneas en Canvas 2D con los datos de la sesión.
+     * Muestra apertura bucal (azul) y movimiento lateral (verde) vs tiempo.
+     * Incluye ejes, líneas de referencia y leyenda.
+     *
+     * @param {Session} session - Sesión con dataPoints a graficar
+     * @returns {void}
      */
     renderChart(session) {
         const canvas = document.getElementById('session-chart');
@@ -268,7 +306,11 @@ class SessionReviewer {
     }
 
     /**
-     * Eliminar sesión desde detalles
+     * Elimina una sesión desde la vista de detalles del modal.
+     * Requiere confirmación del usuario. Cierra el modal y recarga la lista.
+     *
+     * @param {string} sessionId - ID de la sesión a eliminar
+     * @returns {void}
      */
     deleteSessionFromDetails(sessionId) {
         if (confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
@@ -283,7 +325,11 @@ class SessionReviewer {
     }
 
     /**
-     * Eliminar sesión
+     * Elimina una sesión desde la lista principal.
+     * Requiere confirmación del usuario y recarga la lista.
+     *
+     * @param {string} sessionId - ID de la sesión a eliminar
+     * @returns {void}
      */
     deleteSession(sessionId) {
         if (confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
@@ -297,7 +343,9 @@ class SessionReviewer {
     }
 
     /**
-     * Cerrar modal de sesión
+     * Cierra el modal de detalles de sesión y limpia la referencia.
+     *
+     * @returns {void}
      */
     closeSessionModal() {
         const modal = document.getElementById('session-modal');
@@ -308,7 +356,10 @@ class SessionReviewer {
     }
 
     /**
-     * Obtener clase CSS según estado
+     * Mapea un estado de sesión a su clase CSS de badge.
+     *
+     * @param {('completed'|'partial'|'incomplete'|'in-progress')} status - Estado de la sesión
+     * @returns {string} Clase CSS del badge (e.g. 'badge-success')
      */
     getStatusClass(status) {
         const classes = {
@@ -321,7 +372,10 @@ class SessionReviewer {
     }
 
     /**
-     * Obtener texto de estado
+     * Mapea un estado de sesión a su texto legible en español.
+     *
+     * @param {('completed'|'partial'|'incomplete'|'in-progress')} status - Estado de la sesión
+     * @returns {string} Texto legible (e.g. 'Completado')
      */
     getStatusText(status) {
         const texts = {
@@ -334,7 +388,10 @@ class SessionReviewer {
     }
 
     /**
-     * Formatear fecha
+     * Formatea una fecha al estilo largo argentino (e.g. "15 de febrero de 2026").
+     *
+     * @param {Date} date - Fecha a formatear
+     * @returns {string} Fecha formateada en locale es-AR
      */
     formatDate(date) {
         return new Intl.DateTimeFormat('es-AR', {
@@ -345,7 +402,10 @@ class SessionReviewer {
     }
 
     /**
-     * Formatear hora
+     * Formatea una hora en formato HH:MM argentino.
+     *
+     * @param {Date} date - Fecha de la cual extraer la hora
+     * @returns {string} Hora formateada (e.g. "14:30")
      */
     formatTime(date) {
         return new Intl.DateTimeFormat('es-AR', {
@@ -355,7 +415,11 @@ class SessionReviewer {
     }
 
     /**
-     * Filtrar sesiones por ejercicio
+     * Filtra las sesiones por ejercicio y re-renderiza la lista.
+     * Si el ID está vacío, muestra todas las sesiones.
+     *
+     * @param {string} exerciseId - ID del ejercicio a filtrar, o cadena vacía para mostrar todas
+     * @returns {void}
      */
     filterByExercise(exerciseId) {
         const sessions = exerciseId

@@ -1,18 +1,77 @@
 /**
- * Módulo de Gestión de Ejercicios
- * Maneja la creación, edición y almacenamiento de ejercicios personalizados
+ * @module ExerciseManager
+ * @description Módulo de Gestión de Ejercicios.
+ * Maneja la creación, edición, validación, importación/exportación
+ * y almacenamiento de ejercicios orofaciales personalizados.
  */
 
+/**
+ * @typedef {Object} Exercise
+ * @property {string} id - Identificador único del ejercicio (prefijo 'ex_')
+ * @property {string} name - Nombre descriptivo del ejercicio
+ * @property {string} [description] - Descripción o instrucciones del ejercicio
+ * @property {number} duration - Duración en segundos (10-600)
+ * @property {('mouth-opening'|'lateral-movement'|'combined')} type - Tipo de ejercicio
+ * @property {string} createdAt - Fecha de creación en formato ISO 8601
+ * @property {string} [updatedAt] - Fecha de última actualización en formato ISO 8601
+ */
+
+/**
+ * @typedef {Object} ExerciseData
+ * @property {string} name - Nombre del ejercicio
+ * @property {string} [description] - Descripción del ejercicio
+ * @property {number|string} duration - Duración en segundos
+ * @property {string} type - Tipo de ejercicio
+ */
+
+/**
+ * @typedef {Object} ValidationResult
+ * @property {boolean} isValid - `true` si los datos son válidos
+ * @property {string[]} errors - Lista de mensajes de error (vacía si es válido)
+ */
+
+/**
+ * @typedef {Object} ImportResult
+ * @property {boolean} success - `true` si la importación fue exitosa
+ * @property {number} count - Número de ejercicios importados
+ * @property {boolean} replaced - `true` si se reemplazaron los existentes
+ */
+
+/**
+ * Gestor de ejercicios orofaciales.
+ * Persiste ejercicios en localStorage y puede cargar/exportar desde JSON.
+ *
+ * @class ExerciseManager
+ * @example
+ * const manager = new ExerciseManager();
+ * await manager.initializeExercises();
+ * const exercise = manager.createExercise({
+ *   name: 'Apertura Básica',
+ *   duration: 60,
+ *   type: 'mouth-opening'
+ * });
+ */
 class ExerciseManager {
+    /**
+     * Crea una nueva instancia del gestor de ejercicios.
+     * Intenta cargar ejercicios desde localStorage o JSON al instanciarse.
+     */
     constructor() {
+        /** @type {Exercise[]} Lista de ejercicios almacenados */
         this.exercises = [];
+        /** @type {?Exercise} Ejercicio seleccionado actualmente */
         this.currentExercise = null;
+        /** @type {boolean} Indica si se cargaron ejercicios desde JSON */
         this.jsonLoaded = false;
         this.initializeExercises();
     }
 
     /**
-     * Inicializar ejercicios (cargar desde JSON o localStorage)
+     * Inicializa ejercicios cargando desde localStorage.
+     * Si no hay datos almacenados, carga desde el archivo `exercises.json`.
+     *
+     * @async
+     * @returns {void}
      */
     async initializeExercises() {
         // Primero intentar cargar desde localStorage
@@ -34,7 +93,12 @@ class ExerciseManager {
     }
 
     /**
-     * Cargar ejercicios desde archivo JSON
+     * Carga ejercicios desde el archivo `exercises.json` externo.
+     * Si falla, inicializa con ejercicios por defecto.
+     *
+     * @async
+     * @returns {void}
+     * @throws {Error} Si no se puede leer el archivo (fallback a defaults)
      */
     async loadFromJSON() {
         try {
@@ -59,7 +123,9 @@ class ExerciseManager {
     }
 
     /**
-     * Guardar ejercicios en localStorage
+     * Persiste la lista de ejercicios actual en localStorage.
+     *
+     * @returns {void}
      */
     saveExercises() {
         try {
@@ -71,7 +137,10 @@ class ExerciseManager {
     }
 
     /**
-     * Inicializar ejercicios por defecto si no hay ninguno
+     * Inicializa 3 ejercicios por defecto si la lista está vacía:
+     * Apertura Bucal Básica (60s), Movimiento Lateral (90s) y Ejercicio Completo (120s).
+     *
+     * @returns {void}
      */
     initializeDefaultExercises() {
         if (this.exercises.length === 0) {
@@ -109,14 +178,19 @@ class ExerciseManager {
     }
 
     /**
-     * Generar ID único
+     * Genera un ID único con prefijo 'ex_' y sufijo aleatorio.
+     *
+     * @returns {string} ID único con formato `ex_{timestamp}_{random}`
      */
     generateId() {
         return 'ex_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
     /**
-     * Crear nuevo ejercicio
+     * Crea un nuevo ejercicio y lo guarda en la lista.
+     *
+     * @param {ExerciseData} exerciseData - Datos del nuevo ejercicio
+     * @returns {Exercise} El ejercicio creado con ID y timestamp asignados
      */
     createExercise(exerciseData) {
         const exercise = {
@@ -136,7 +210,11 @@ class ExerciseManager {
     }
 
     /**
-     * Actualizar ejercicio existente
+     * Actualiza un ejercicio existente por su ID.
+     *
+     * @param {string} id - ID del ejercicio a actualizar
+     * @param {ExerciseData} exerciseData - Nuevos datos del ejercicio
+     * @returns {?Exercise} El ejercicio actualizado, o `null` si no se encontró
      */
     updateExercise(id, exerciseData) {
         const index = this.exercises.findIndex(ex => ex.id === id);
@@ -161,7 +239,10 @@ class ExerciseManager {
     }
 
     /**
-     * Eliminar ejercicio
+     * Elimina un ejercicio por su ID.
+     *
+     * @param {string} id - ID del ejercicio a eliminar
+     * @returns {boolean} `true` si se eliminó, `false` si no se encontró
      */
     deleteExercise(id) {
         const index = this.exercises.findIndex(ex => ex.id === id);
@@ -179,28 +260,39 @@ class ExerciseManager {
     }
 
     /**
-     * Obtener ejercicio por ID
+     * Busca un ejercicio por su ID.
+     *
+     * @param {string} id - ID del ejercicio a buscar
+     * @returns {?Exercise} El ejercicio encontrado o `undefined`
      */
     getExerciseById(id) {
         return this.exercises.find(ex => ex.id === id);
     }
 
     /**
-     * Obtener todos los ejercicios
+     * Obtiene una copia de todos los ejercicios almacenados.
+     *
+     * @returns {Exercise[]} Copia del array de ejercicios
      */
     getAllExercises() {
         return [...this.exercises];
     }
 
     /**
-     * Obtener ejercicios por tipo
+     * Filtra ejercicios por tipo.
+     *
+     * @param {('mouth-opening'|'lateral-movement'|'combined')} type - Tipo a filtrar
+     * @returns {Exercise[]} Ejercicios que coinciden con el tipo
      */
     getExercisesByType(type) {
         return this.exercises.filter(ex => ex.type === type);
     }
 
     /**
-     * Establecer ejercicio actual
+     * Establece el ejercicio actual por su ID.
+     *
+     * @param {string} id - ID del ejercicio a seleccionar
+     * @returns {?Exercise} El ejercicio seleccionado o `undefined`
      */
     setCurrentExercise(id) {
         this.currentExercise = this.getExerciseById(id);
@@ -208,14 +300,19 @@ class ExerciseManager {
     }
 
     /**
-     * Obtener ejercicio actual
+     * Obtiene el ejercicio actualmente seleccionado.
+     *
+     * @returns {?Exercise} Ejercicio actual o `null`
      */
     getCurrentExercise() {
         return this.currentExercise;
     }
 
     /**
-     * Obtener nombre del tipo de ejercicio
+     * Convierte el código de tipo de ejercicio a nombre legible en español.
+     *
+     * @param {string} type - Código de tipo
+     * @returns {string} Nombre legible del tipo
      */
     getTypeName(type) {
         const typeNames = {
@@ -227,7 +324,10 @@ class ExerciseManager {
     }
 
     /**
-     * Formatear duración
+     * Formatea una duración en segundos a un string legible (e.g. "2m 30s").
+     *
+     * @param {number} seconds - Duración en segundos
+     * @returns {string} Duración formateada
      */
     formatDuration(seconds) {
         const mins = Math.floor(seconds / 60);
@@ -240,7 +340,11 @@ class ExerciseManager {
     }
 
     /**
-     * Validar datos de ejercicio
+     * Valida los datos de un ejercicio antes de crear o actualizar.
+     * Verifica nombre, duración (10-600s) y tipo.
+     *
+     * @param {ExerciseData} exerciseData - Datos a validar
+     * @returns {ValidationResult} Resultado de la validación
      */
     validateExercise(exerciseData) {
         const errors = [];
@@ -268,7 +372,10 @@ class ExerciseManager {
     }
 
     /**
-     * Exportar ejercicios a JSON
+     * Exporta todos los ejercicios a un archivo JSON descargable.
+     * Genera un archivo con nombre `ejercicios_orofaciales_{fecha}.json`.
+     *
+     * @returns {void}
      */
     exportToJSON() {
         const exportData = {
@@ -293,7 +400,13 @@ class ExerciseManager {
     }
 
     /**
-     * Importar ejercicios desde archivo JSON
+     * Importa ejercicios desde un archivo JSON.
+     * Permite reemplazar los ejercicios existentes o combinarlos sin duplicados.
+     *
+     * @async
+     * @param {File} file - Archivo JSON a importar
+     * @returns {Promise<ImportResult>} Resultado de la importación
+     * @throws {Error} Si el formato del JSON es inválido o no hay ejercicios válidos
      */
     async importFromFile(file) {
         return new Promise((resolve, reject) => {
@@ -355,7 +468,11 @@ class ExerciseManager {
     }
 
     /**
-     * Resetear a ejercicios del JSON original
+     * Resetea los ejercicios a los valores originales del archivo JSON.
+     * Requiere confirmación del usuario. Elimina personalizaciones.
+     *
+     * @async
+     * @returns {boolean} `true` si se reseteó, `false` si el usuario canceló
      */
     async resetToDefault() {
         if (confirm('¿Estás seguro de que quieres resetear a los ejercicios originales? Se perderán todos los cambios.')) {
