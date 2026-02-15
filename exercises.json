@@ -1,0 +1,51 @@
+{
+  "exercises": [
+    {
+      "id": "ex_default_001",
+      "name": "Apertura Bucal Básica",
+      "description": "Abre la boca lo más que puedas y mantén la posición. Este ejercicio ayuda a mejorar la movilidad mandibular.",
+      "duration": 60,
+      "type": "mouth-opening",
+      "createdAt": "2026-01-06T00:00:00.000Z",
+      "enabled": true
+    },
+    {
+      "id": "ex_default_002",
+      "name": "Movimiento Lateral",
+      "description": "Mueve la mandíbula de lado a lado lentamente. Controla el movimiento y mantén cada posición por 2 segundos.",
+      "duration": 90,
+      "type": "lateral-movement",
+      "createdAt": "2026-01-06T00:00:00.000Z",
+      "enabled": true
+    },
+    {
+      "id": "ex_default_003",
+      "name": "Ejercicio Completo",
+      "description": "Combina apertura bucal y movimientos laterales. Alterna entre ambos ejercicios cada 10 segundos.",
+      "duration": 120,
+      "type": "combined",
+      "createdAt": "2026-01-06T00:00:00.000Z",
+      "enabled": true
+    },
+    {
+      "id": "ex_default_004",
+      "name": "Apertura Prolongada",
+      "description": "Mantén la boca abierta al máximo durante todo el ejercicio. Ideal para mejorar resistencia.",
+      "duration": 30,
+      "type": "mouth-opening",
+      "createdAt": "2026-01-06T00:00:00.000Z",
+      "enabled": true
+    },
+    {
+      "id": "ex_default_005",
+      "name": "Movimientos Rápidos",
+      "description": "Realiza movimientos laterales rápidos y controlados. Aumenta gradualmente la velocidad.",
+      "duration": 45,
+      "type": "lateral-movement",
+      "createdAt": "2026-01-06T00:00:00.000Z",
+      "enabled": true
+    }
+  ],
+  "version": "1.0",
+  "lastModified": "2026-01-06T00:00:00.000Z"
+}
